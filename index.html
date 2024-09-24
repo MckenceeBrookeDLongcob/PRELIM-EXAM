@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grade Calculator</title>
+    <!-- Include PyScript for Python support in the browser -->
+    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    <style>
+        /* Basic styling for the body to center content and set a background */
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #303031, #757676);
+            color: #444;
+        }
+
+        /* Styling for the input fields */
+        input {
+            margin: 8px 0;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            width: 280px;
+            background-color: #fff;
+            font-size: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Styling for the buttons */
+        button {
+            margin: 12px 0;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            background-color: #23c35b;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Button hover effect */
+        button:hover {
+            background-color: #239f4e;
+            transform: translateY(-2px);
+        }
+
+        /* Result display styling */
+        p {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            background-color: #e2f0d9;
+            color: #155724;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none; /* Hidden by default */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Container for input fields and buttons */
+        .container {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            width: 300px;
+        }
+
+        /* Heading styling */
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Container for the Grade Calculator form -->
+    <div class="container">
+        <h1>Grade Calculator</h1>
+
+        <!-- Input fields for absences and various grades -->
+        <input type="text" id="absences" placeholder="Number of Absences" />
+        <input type="text" id="prelim_exam" placeholder="Prelim Exam Grade (0-100)" />
+        <input type="text" id="quizzes" placeholder="Quizzes Grade (0-100)" />
+        <input type="text" id="requirements" placeholder="Requirements Grade (0-100)" />
+        <input type="text" id="recitation" placeholder="Recitation Grade (0-100)" />
+
+        <!-- Button to trigger the calculation of grades -->
+        <button id="calculateButton">Calculate Grades</button>
+
+        <!-- Paragraph for displaying the result -->
+        <p id="result"></p>
+    </div>
+
+    <!-- PyScript section for the grade calculation logic -->
+    <py-script>
+        from pyscript import Element
+
+        def is_float(value):
+            """Helper function to check if a value can be converted to a float."""
+            try:
+                float(value)
+                return True
+            except ValueError:
+                return False
+
+        def is_int(value):
+            """Helper function to check if a value can be converted to an int."""
+            try:
+                int(value)
+                return True
+            except ValueError:
+                return False
+
+        def calculate_grades(event):
+            try:
+                # Retrieve input values from the form
+                absences_str = Element("absences").element.value
+                prelim_exam_str = Element("prelim_exam").element.value
+                quizzes_str = Element("quizzes").element.value
+                requirements_str = Element("requirements").element.value
+                recitation_str = Element("recitation").element.value
+
+                # Check if any input is empty
+                if not all([absences_str, prelim_exam_str, quizzes_str, requirements_str, recitation_str]):
+                    raise ValueError("All input fields must be filled.")
+
+                # Check if all inputs are valid numbers
+                if not (is_int(absences_str) and is_float(prelim_exam_str) and is_float(quizzes_str) and is_float(requirements_str) and is_float(recitation_str)):
+                    raise ValueError("Invalid input. Please enter numbers only.")
+
+                # Convert inputs to correct types
+                absences = int(absences_str)
+                prelim_exam = float(prelim_exam_str)
+                quizzes = float(quizzes_str)
+                requirements = float(requirements_str)
+                recitation = float(recitation_str)
+
+                # Validate input ranges: Grades must be between 0 and 100, absences must be 0 or more
+                if absences < 0 or prelim_exam < 0 or prelim_exam > 100 or quizzes < 0 or quizzes > 100 or requirements < 0 or requirements > 100 or recitation < 0 or recitation > 100:
+                    raise ValueError("Invalid input. Grades must be between 0 and 100.")
+
+                # Attendance calculation: Start with 100, subtract 10 points per absence
+                # If absences are 4 or more, the student automatically fails
+                if absences >= 4:
+                    Element("result").write("FAILED: 4 or more absences.")
+                    Element("result").element.style.display = "block"
+                    return  # Stop further execution if the student fails due to absences
+
+                # Calculate the attendance score
+                attendance = max(0, 100 - absences * 10)
+
+                # Calculate class standing as 40% Quizzes, 30% Requirements, 30% Recitation
+                class_standing = quizzes * 0.4 + requirements * 0.3 + recitation * 0.3
+
+                # Prelim grade calculation: 60% Prelim Exam, 10% Attendance, 30% Class Standing
+                prelim_grade = round(prelim_exam * 0.6 + attendance * 0.1 + class_standing * 0.3, 2)
+
+                # Required Midterm and Final grades to pass (75%) and to achieve Dean's List (90%)
+                target_passing = (75 - prelim_grade * 0.2) / 0.8
+                target_deans_list = (90 - prelim_grade * 0.2) / 0.8
+
+                # Display the results: Prelim grade and the required midterm/final grades for passing and Dean's List
+                Element("result").write(
+                    f"Prelim Grade: {prelim_grade}.\n"
+                    f"To pass (75%), you need a Midterm/Final grade of {target_passing:.2f}.\n"
+                    f"To achieve Dean's list (90%), you need a Midterm/Final of {target_deans_list:.2f}."
+                )
+
+                # Make the result paragraph visible after calculation
+                Element("result").element.style.display = "block"
+
+            # Handle cases where inputs are not valid numbers or are out of range
+            except ValueError as e:
+                Element("result").write(str(e))
+                Element("result").element.style.display = "block"
+
+        # Attach event listener to the calculate button to trigger the grade calculation when clicked
+        Element("calculateButton").element.onclick = calculate_grades
+    </py-script>
+</body>
+</html>
